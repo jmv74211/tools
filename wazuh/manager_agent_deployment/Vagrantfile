@@ -1,0 +1,53 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# GLOBAL VARS
+
+MANAGER_GENERIC_MEMORY = 1024
+AGENT_GENERIC_MEMORY = 512
+GENERIC_CPUS = 1
+ROOT_PATH = "#{Dir.pwd}/../"
+CENTOS_PROVISION = "#{ROOT_PATH}/provision_files/linux_provision.sh"
+NODE = ENV['NODE']
+MANAGER_IMAGE = ENV['MANAGER_IMAGE']
+AGENT_IMAGE = ENV['AGENT_IMAGE']
+SOURCE_BRANCH = ENV['SOURCE_BRANCH']
+manager_ip = ""
+
+OS = {
+  # Managers
+  'centos-manager' => {'box' => 'centos/7',        'memory'=> MANAGER_GENERIC_MEMORY, 'cpus' =>  GENERIC_CPUS, 'ip' => '172.16.1.10'},
+  'ubuntu-manager' => {'box' => 'ubuntu/bionic64', 'memory'=> MANAGER_GENERIC_MEMORY, 'cpus' =>  GENERIC_CPUS, 'ip' => '172.16.1.20'},
+  'debian-manager' => {'box' => 'debian/stretch64','memory'=> MANAGER_GENERIC_MEMORY, 'cpus' =>  GENERIC_CPUS, 'ip' => '172.16.1.30'},
+
+  # Agents
+  'centos-agent'   => {'box' => 'centos/7',        'memory'=> AGENT_GENERIC_MEMORY, 'cpus' =>  GENERIC_CPUS, 'ip' => '172.16.1.11'},
+  'ubuntu-agent'   => {'box' => 'ubuntu/bionic64', 'memory'=> AGENT_GENERIC_MEMORY, 'cpus' =>  GENERIC_CPUS, 'ip' => '172.16.1.21'},
+  'debian-agent'   => {'box' => 'debian/stretch64','memory'=> AGENT_GENERIC_MEMORY, 'cpus' =>  GENERIC_CPUS, 'ip' => '172.16.1.31'},
+}
+
+if not MANAGER_IMAGE.nil? and MANAGER_IMAGE.include? 'centos'
+  manager_ip = OS['centos-manager']['ip']
+elsif not MANAGER_IMAGE.nil? and MANAGER_IMAGE.include? 'ubuntu'
+   manager_ip = OS['ubuntu-manager']['ip']
+ elsif not MANAGER_IMAGE.nil? and MANAGER_IMAGE.include? 'debian'
+  manager_ip = OS['debian-manager']['ip']
+end
+
+Vagrant.configure('2') do |config|
+  OS.each do |key, value|
+    config.vm.define "#{key}" do |node|
+
+      node.vm.box = "#{value['box']}"
+      node.vm.network :private_network, ip: "#{value['ip']}"
+      node.vm.hostname = "#{key}"
+
+      node.vm.provider "virtualbox" do |vb|
+        vb.memory = "#{value['memory']}"
+        vb.cpus = "#{value['cpus']}"
+      end
+
+      node.vm.provision :shell, path: "#{CENTOS_PROVISION}", args: "#{NODE} #{manager_ip} #{key} #{SOURCE_BRANCH}"
+    end
+  end
+end
