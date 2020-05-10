@@ -1,0 +1,37 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+os = {
+  'centos'  => {'box' => 'jmv74211/centos8',     'ip' => '172.16.1.10', 'cpu' => '1', 'memory' => '1024'},
+  'ubuntu'  => {'box' => 'jmv74211/ubuntu20.04', 'ip' => '172.16.1.20', 'cpu' => '1', 'memory' => '1024'},
+  'windows' => {'box' => 'jmv74211/windows2016', 'ip' => '172.16.1.30', 'cpu' => '2', 'memory' => '2048'},
+}
+
+Vagrant.configure("2") do |config|
+  os.each do |key, value|
+    config.vm.define "#{key}" do |node|
+      node.vm.box = "#{value['box']}"
+
+      config.ssh.insert_key = false
+      node.vm.synced_folder ".", "/vagrant", disabled: true
+      node.vm.network :private_network, ip: "#{value['ip']}"
+      #config.vm.network "public_network", ip: "#{value['ip']}"
+      #node.vm.network :public_network, :bridge => "enp3s0: Ethernet"
+
+      node.vm.hostname = "#{key}"
+      node.vm.provider "virtualbox" do |vb|
+        vb.memory = "#{value['memory']}"
+        vb.cpus = "#{value['cpu']}"
+      end
+
+      if key == "windows"
+         node.vm.communicator = "winrm"
+         node.winrm.username = "vagrant"
+         node.winrm.password = "vagrant"
+      else
+         node.vm.communicator = "ssh"
+      end
+
+    end
+  end
+end
